@@ -33,7 +33,7 @@ targets:
       - path: WatchProbe
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.summershar.WatchProbe
+        PRODUCT_BUNDLE_IDENTIFIER: com.summershar.RabbitMoodCompanion.WatchProbe
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: "WatchProbe"
         INFOPLIST_KEY_WKApplication: YES
