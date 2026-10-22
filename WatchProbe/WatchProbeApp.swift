@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 import WatchKit
 import Combine
 
@@ -81,7 +82,7 @@ struct WatchProbeView: View {
 
                 Text(httpsStatus)
                     .font(.system(size: 10))
-                    .foregroundStyle(httpsStatus.contains("成功") ? .green : .secondary)
+                    .foregroundStyle(httpsStatus.contains("成功") ? Color.green : Color.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text("不读取健康数据；此版本只验证前台交互与本地状态。")
