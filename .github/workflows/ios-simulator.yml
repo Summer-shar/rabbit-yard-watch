@@ -1,0 +1,50 @@
+name: iOS Simulator Build and Preview
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Run shared core tests
+        run: swift test --package-path BunnyCore
+      - name: Build iOS Simulator app
+        run: |
+          xcodebuild -project RabbitMoodCompanion.xcodeproj \
+            -scheme RabbitMoodCompanion \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
+      - name: Boot simulator and capture screenshot
+        run: |
+          DEVICE_ID=$(xcrun simctl list devices available | grep -m 1 -E 'iPhone 16 Pro \(' | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/')
+          if [ -z "$DEVICE_ID" ]; then
+            DEVICE_ID=$(xcrun simctl list devices available | grep -m 1 -E 'iPhone.*\(' | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/')
+          fi
+          xcrun simctl boot "$DEVICE_ID" || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -path '*/Build/Products/Debug-iphonesimulator/RabbitMoodCompanion.app' -print -quit)
+          xcrun simctl install "$DEVICE_ID" "$APP_PATH"
+          xcrun simctl launch "$DEVICE_ID" com.summershar.RabbitMoodCompanion
+          sleep 5
+          mkdir -p preview
+          xcrun simctl io "$DEVICE_ID" screenshot preview/iphone-simulator.png
+      - name: Upload preview artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rabbit-companion-ios-preview
+          path: |
+            preview/iphone-simulator.png
+            ~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug-iphonesimulator/RabbitMoodCompanion.app
+          if-no-files-found: warn
