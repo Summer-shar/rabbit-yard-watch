@@ -64,7 +64,7 @@ jobs:
           test -n "$WATCH_APP"
           /usr/libexec/PlistBuddy -c 'Print :WKCompanionAppBundleIdentifier' "$WATCH_APP/Info.plist"
           xcrun simctl install "$WATCH_ID" "$WATCH_APP"
-          xcrun simctl launch "$WATCH_ID" com.summershar.WatchProbe
+          xcrun simctl launch "$WATCH_ID" com.summershar.RabbitMoodCompanion.WatchProbe
           sleep 5
           mkdir -p preview
           xcrun simctl io "$WATCH_ID" screenshot preview/watch-simulator.png
