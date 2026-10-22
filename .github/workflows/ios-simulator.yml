@@ -1,4 +1,4 @@
-name: iOS Simulator Build and Preview
+name: iOS and watchOS Simulator Build
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-ios:
+  build-and-preview:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +26,15 @@ jobs:
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO build
-      - name: Boot simulator and capture screenshot
+      - name: Build watchOS Simulator app
+        run: |
+          xcodebuild -project RabbitMoodCompanion.xcodeproj \
+            -scheme WatchProbe \
+            -sdk watchsimulator \
+            -configuration Debug \
+            -destination 'generic/platform=watchOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
+      - name: Boot iPhone simulator and capture screenshot
         run: |
           DEVICE_ID=$(xcrun simctl list devices available | grep -m 1 -E 'iPhone 16 Pro \(' | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/')
           if [ -z "$DEVICE_ID" ]; then
@@ -40,11 +48,30 @@ jobs:
           sleep 5
           mkdir -p preview
           xcrun simctl io "$DEVICE_ID" screenshot preview/iphone-simulator.png
-      - name: Upload preview artifacts
+      - name: Boot Apple Watch simulator and capture WatchProbe screenshot
+        continue-on-error: true
+        run: |
+          WATCH_ID=$(xcrun simctl list devices available | grep -m 1 -E 'Apple Watch Series 10 \(' | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/')
+          if [ -z "$WATCH_ID" ]; then
+            WATCH_ID=$(xcrun simctl list devices available | grep -m 1 -E 'Apple Watch.*\(' | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/')
+          fi
+          if [ -z "$WATCH_ID" ]; then
+            echo "No watchOS simulator device found; build result is still available."
+            exit 0
+          fi
+          xcrun simctl boot "$WATCH_ID" || true
+          xcrun simctl bootstatus "$WATCH_ID" -b
+          WATCH_APP=$(find ~/Library/Developer/Xcode/DerivedData -path '*/Build/Products/Debug-watchsimulator/WatchProbe.app' -print -quit)
+          xcrun simctl install "$WATCH_ID" "$WATCH_APP"
+          xcrun simctl launch "$WATCH_ID" com.summershar.WatchProbe
+          sleep 5
+          xcrun simctl io "$WATCH_ID" screenshot preview/watch-simulator.png
+      - name: Upload simulator previews and app builds
         uses: actions/upload-artifact@v4
         with:
-          name: rabbit-companion-ios-preview
+          name: rabbit-companion-ios-watchos-preview
           path: |
-            preview/iphone-simulator.png
+            preview/*.png
             ~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug-iphonesimulator/RabbitMoodCompanion.app
+            ~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug-watchsimulator/WatchProbe.app
           if-no-files-found: warn
